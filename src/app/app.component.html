@@ -1,3 +1,22 @@
 <ion-app>
-  <ion-router-outlet></ion-router-outlet>
+  <!-- Normal app content (hidden when blocked) -->
+  <ion-router-outlet *ngIf="!isBlocked"></ion-router-outlet>
+
+  <!-- Security blocking overlay -->
+  <div *ngIf="isBlocked" class="security-block-overlay">
+    <div class="security-block-content">
+      <div class="security-icon-container">
+        <ion-icon name="shield-half-outline" class="security-icon"></ion-icon>
+      </div>
+      <h1 class="security-title">Security Check Failed</h1>
+      <p class="security-message">
+        This app cannot run on this device for security reasons.
+      </p>
+      <div class="failure-reasons" *ngIf="failureReasons.length > 0">
+        <p *ngFor="let reason of failureReasons" class="reason-item">
+          {{ reason }}
+        </p>
+      </div>
+    </div>
+  </div>
 </ion-app>

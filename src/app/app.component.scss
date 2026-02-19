@@ -1,0 +1,61 @@
+.security-block-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99999;
+  background-color: var(--ion-background-color, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.security-block-content {
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+}
+
+.security-icon-container {
+  margin-bottom: 24px;
+}
+
+.security-icon {
+  font-size: 80px;
+  color: var(--ion-color-danger, #eb445a);
+}
+
+.security-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--ion-text-color, #000000);
+}
+
+.security-message {
+  font-size: 16px;
+  color: var(--ion-color-medium, #92949c);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.failure-reasons {
+  text-align: left;
+  padding: 16px;
+  background: var(--ion-color-light, #f4f5f8);
+  border-radius: 12px;
+}
+
+.reason-item {
+  font-size: 14px;
+  color: var(--ion-color-danger, #eb445a);
+  padding: 4px 0;
+  margin: 0;
+  line-height: 1.4;
+
+  &::before {
+    content: '• ';
+  }
+}
