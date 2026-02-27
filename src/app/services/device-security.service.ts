@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
 import { App } from '@capacitor/app';
-import DeviceSecurity, { SecurityCheckResult } from '../plugins/device-security.plugin';
+import { Subject, Observable } from 'rxjs';
+import DeviceSecurity, { SecurityCheckResult, ScreenshotDetectedEvent } from '../plugins/device-security.plugin';
 
 @Injectable({
   providedIn: 'root',
@@ -9,6 +10,7 @@ import DeviceSecurity, { SecurityCheckResult } from '../plugins/device-security.
 export class DeviceSecurityService {
   private lastCheckResult: SecurityCheckResult | null = null;
   private _isBlocked = false;
+  private screenshotDetected$ = new Subject<ScreenshotDetectedEvent>();
 
   constructor(private platform: Platform) {}
 
@@ -24,6 +26,29 @@ export class DeviceSecurityService {
 
     await this.runSecurityChecks();
     this.setupForegroundListener();
+    await this.setupScreenshotDetection();
+  }
+
+  /**
+   * Setup screenshot detection listener.
+   */
+  private async setupScreenshotDetection(): Promise<void> {
+    try {
+      await DeviceSecurity.enableScreenshotDetection();
+      await DeviceSecurity.addListener('screenshotDetected', (event) => {
+        console.warn('[DeviceSecurity] Screenshot detected at:', event.timestamp);
+        this.screenshotDetected$.next(event);
+      });
+    } catch (error) {
+      console.error('[DeviceSecurity] Failed to setup screenshot detection:', error);
+    }
+  }
+
+  /**
+   * Observable that emits when a screenshot is detected.
+   */
+  get onScreenshotDetected(): Observable<ScreenshotDetectedEvent> {
+    return this.screenshotDetected$.asObservable();
   }
 
   /**

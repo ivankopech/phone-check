@@ -12,9 +12,16 @@ import com.google.android.play.core.integrity.IntegrityTokenRequest;
 import com.google.android.play.core.integrity.IntegrityTokenResponse;
 import com.google.android.gms.tasks.Task;
 
+import android.app.Activity;
+import android.os.Build;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
 @CapacitorPlugin(name = "DeviceSecurity")
 public class DeviceSecurityPlugin extends Plugin {
@@ -127,6 +134,37 @@ public class DeviceSecurityPlugin extends Plugin {
             resolveSecurityResult(call, false, integrityResult,
                 false, e.getMessage(), allReasons);
         }
+    }
+
+    // MARK: - Screenshot Detection
+
+    @PluginMethod
+    public void enableScreenshotDetection(PluginCall call) {
+        // On Android, FLAG_SECURE in MainActivity prevents screenshots at the window level.
+        // On Android 14+ (API 34), we can also detect screenshot attempts via ScreenCaptureCallback.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            Activity activity = getActivity();
+            if (activity != null) {
+                try {
+                    activity.registerScreenCaptureCallback(
+                        activity.getMainExecutor(),
+                        () -> {
+                            JSObject data = new JSObject();
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+                            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                            data.put("timestamp", sdf.format(new Date()));
+                            notifyListeners("screenshotDetected", data);
+                        }
+                    );
+                } catch (Exception e) {
+                    // Silently fail - FLAG_SECURE still prevents screenshots
+                }
+            }
+        }
+
+        JSObject ret = new JSObject();
+        ret.put("enabled", true);
+        call.resolve(ret);
     }
 
     private void resolveSecurityResult(PluginCall call, boolean secure,

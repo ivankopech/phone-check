@@ -1,6 +1,7 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { Platform } from '@ionic/angular';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Platform, ToastController } from '@ionic/angular';
 import { App } from '@capacitor/app';
+import { Subscription } from 'rxjs';
 import { DeviceSecurityService } from './services/device-security.service';
 
 @Component({
@@ -9,14 +10,16 @@ import { DeviceSecurityService } from './services/device-security.service';
   styleUrls: ['app.component.scss'],
   standalone: false,
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   isBlocked = false;
   failureReasons: string[] = [];
+  private screenshotSub?: Subscription;
 
   constructor(
     private securityService: DeviceSecurityService,
     private platform: Platform,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private toastController: ToastController
   ) {}
 
   ngOnInit(): void {
@@ -32,6 +35,28 @@ export class AppComponent implements OnInit {
         }
       });
     }
+
+    // Listen for screenshot detection events
+    this.screenshotSub = this.securityService.onScreenshotDetected.subscribe(
+      async () => {
+        await this.showScreenshotWarning();
+      }
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.screenshotSub?.unsubscribe();
+  }
+
+  private async showScreenshotWarning(): Promise<void> {
+    const toast = await this.toastController.create({
+      message: 'Screenshots are not allowed for security reasons.',
+      duration: 3000,
+      position: 'top',
+      color: 'danger',
+      icon: 'shield-half-outline',
+    });
+    await toast.present();
   }
 
   private updateBlockedState(): void {

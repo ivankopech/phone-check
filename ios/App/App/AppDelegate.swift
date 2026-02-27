@@ -9,7 +9,42 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Run security checks before anything else
         performSecurityCheck()
+
+        // Enable screenshot protection after the window is set up
+        DispatchQueue.main.async { [weak self] in
+            if let window = self?.window {
+                ScreenshotProtectionManager.shared.enableProtection(in: window)
+            }
+        }
+
+        // Register for screenshot notification (fires after capture)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(screenshotTaken),
+            name: UIApplication.userDidTakeScreenshotNotification,
+            object: nil
+        )
+
         return true
+    }
+
+    @objc private func screenshotTaken() {
+        // Show native alert informing the user
+        guard let rootVC = window?.rootViewController else { return }
+
+        let alert = UIAlertController(
+            title: "Screenshot Not Allowed",
+            message: "Screenshots are disabled for security reasons. The captured image will appear blank.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+
+        // Find the topmost presented view controller
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController {
+            topVC = presented
+        }
+        topVC.present(alert, animated: true)
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

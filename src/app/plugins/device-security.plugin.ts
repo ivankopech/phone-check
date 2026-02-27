@@ -1,4 +1,4 @@
-import { registerPlugin } from '@capacitor/core';
+import { registerPlugin, PluginListenerHandle } from '@capacitor/core';
 
 // MARK: - Interfaces
 
@@ -31,12 +31,22 @@ export interface SecurityCheckResult {
   failureReasons: string[];
 }
 
+export interface ScreenshotDetectedEvent {
+  timestamp: string;
+}
+
 // MARK: - Plugin Interface
 
 export interface DeviceSecurityPlugin {
   checkDeviceIntegrity(): Promise<IntegrityCheckResult>;
   attestDevice(): Promise<AttestResult>;
   isSecure(): Promise<SecurityCheckResult>;
+  enableScreenshotDetection(): Promise<{ enabled: boolean }>;
+  addListener(
+    eventName: 'screenshotDetected',
+    listenerFunc: (event: ScreenshotDetectedEvent) => void,
+  ): Promise<PluginListenerHandle>;
+  removeAllListeners(): Promise<void>;
 }
 
 // MARK: - Register Plugin

@@ -11,6 +11,7 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.WindowManager;
 
 import com.getcapacitor.BridgeActivity;
 
@@ -24,6 +25,12 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         // Register the security plugin before super.onCreate
         registerPlugin(DeviceSecurityPlugin.class);
+
+        // Prevent screenshots and screen recording (content appears black)
+        getWindow().setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        );
 
         super.onCreate(savedInstanceState);
 

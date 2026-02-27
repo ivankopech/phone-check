@@ -20,6 +20,7 @@
 		C70E96607542235021A812FC /* AppViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC66FE8C2670959865608FC5 /* AppViewController.swift */; };
 		D75E04EEF8701211B97EFB22 /* DeviceSecurityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D24ECC4A5C7A492C2C8B82E /* DeviceSecurityPlugin.swift */; };
 		D9AD26F13937508E56157265 /* AppAttestService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975F75F185EF2B0731CB909E /* AppAttestService.swift */; };
+		E3A1B2C4D5E6F70891A2B3C4 /* ScreenshotProtectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* ScreenshotProtectionManager.swift */; };
 		F0C3C367399D881E592A0C04 /* DeviceCheck.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D572B3800F226AC1C2D57688 /* DeviceCheck.framework */; };
 /* End PBXBuildFile section */
 
@@ -39,6 +40,7 @@
 		733A0DA7D22C33084F510219 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		788B21BEAD5D12CE201F9615 /* DeviceIntegrityChecker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceIntegrityChecker.swift; sourceTree = "<group>"; };
 		975F75F185EF2B0731CB909E /* AppAttestService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppAttestService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5C /* ScreenshotProtectionManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenshotProtectionManager.swift; sourceTree = "<group>"; };
 		D572B3800F226AC1C2D57688 /* DeviceCheck.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceCheck.framework; path = System/Library/Frameworks/DeviceCheck.framework; sourceTree = SDKROOT; };
 		DC66FE8C2670959865608FC5 /* AppViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppViewController.swift; sourceTree = "<group>"; };
 		FC17A885E1F92FFFD3E2DDAA /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
@@ -100,6 +102,7 @@
 				1F11A81024F40FFACFF17DC3 /* SecurityBlockingView.swift */,
 				4D24ECC4A5C7A492C2C8B82E /* DeviceSecurityPlugin.swift */,
 				DC66FE8C2670959865608FC5 /* AppViewController.swift */,
+				A1B2C3D4E5F60718293A4B5C /* ScreenshotProtectionManager.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -236,6 +239,7 @@
 				341EEB4656DB731C1B1818E1 /* SecurityBlockingView.swift in Sources */,
 				D75E04EEF8701211B97EFB22 /* DeviceSecurityPlugin.swift in Sources */,
 				C70E96607542235021A812FC /* AppViewController.swift in Sources */,
+				E3A1B2C4D5E6F70891A2B3C4 /* ScreenshotProtectionManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

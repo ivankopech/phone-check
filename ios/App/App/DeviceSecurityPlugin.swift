@@ -1,5 +1,6 @@
 import Foundation
 import Capacitor
+import UIKit
 
 @objc(DeviceSecurityPlugin)
 public class DeviceSecurityPlugin: CAPInstancePlugin, CAPBridgedPlugin {
@@ -9,8 +10,11 @@ public class DeviceSecurityPlugin: CAPInstancePlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "checkDeviceIntegrity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "attestDevice", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "isSecure", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "isSecure", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "enableScreenshotDetection", returnType: CAPPluginReturnPromise)
     ]
+
+    private var screenshotObserver: NSObjectProtocol?
 
     // MARK: - Check Device Integrity (manual checks only)
 
@@ -35,6 +39,31 @@ public class DeviceSecurityPlugin: CAPInstancePlugin, CAPBridgedPlugin {
                 "success": attestResult.success,
                 "error": attestResult.error ?? ""
             ])
+        }
+    }
+
+    // MARK: - Screenshot Detection
+
+    @objc func enableScreenshotDetection(_ call: CAPPluginCall) {
+        // Listen for screenshot notifications from the OS
+        screenshotObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.userDidTakeScreenshotNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            self?.notifyListeners("screenshotDetected", data: [
+                "timestamp": formatter.string(from: Date())
+            ])
+        }
+
+        call.resolve(["enabled": true])
+    }
+
+    deinit {
+        if let observer = screenshotObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 
