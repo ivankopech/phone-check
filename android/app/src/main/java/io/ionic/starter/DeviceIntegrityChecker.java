@@ -6,6 +6,8 @@ import android.os.Build;
 import android.os.Debug;
 import android.provider.Settings;
 
+import android.util.Log;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -31,30 +33,36 @@ public class DeviceIntegrityChecker {
             this.isDebugged = isDebugged;
             this.isDeveloperModeEnabled = isDeveloperModeEnabled;
             this.failureReasons = failureReasons;
-            this.isSecure = !isRooted && !isEmulator && !isDebugged && !isDeveloperModeEnabled;
+            this.isSecure = !isRooted;
         }
     }
 
     // MARK: - Main Check
 
+    private static final String TAG = "DeviceSecurity";
+
     public static IntegrityResult performAllChecks(Context context) {
         List<String> rootReasons = new ArrayList<>();
-        List<String> emulatorReasons = new ArrayList<>();
-        List<String> debugReasons = new ArrayList<>();
-        List<String> devModeReasons = new ArrayList<>();
+        // Emulator, debugger, and developer mode checks disabled for now
+        // List<String> emulatorReasons = new ArrayList<>();
+        // List<String> debugReasons = new ArrayList<>();
+        // List<String> devModeReasons = new ArrayList<>();
 
         boolean isRooted = checkRoot(rootReasons);
-        boolean isEmulator = checkEmulator(emulatorReasons);
-        boolean isDebugged = checkDebugger(context, debugReasons);
-        boolean isDeveloperMode = checkDeveloperMode(context, devModeReasons);
+        // boolean isEmulator = checkEmulator(emulatorReasons);
+        // boolean isDebugged = checkDebugger(context, debugReasons);
+        // boolean isDeveloperMode = checkDeveloperMode(context, devModeReasons);
 
         List<String> allReasons = new ArrayList<>();
         allReasons.addAll(rootReasons);
-        allReasons.addAll(emulatorReasons);
-        allReasons.addAll(debugReasons);
-        allReasons.addAll(devModeReasons);
 
-        return new IntegrityResult(isRooted, isEmulator, isDebugged, isDeveloperMode, allReasons);
+        if (allReasons.isEmpty()) {
+            Log.i(TAG, "Root check PASSED - no issues found");
+        } else {
+            Log.w(TAG, "Root check FAILED - " + allReasons.size() + " issues found");
+        }
+
+        return new IntegrityResult(isRooted, false, false, false, allReasons);
     }
 
     // MARK: - Root Detection
@@ -62,40 +70,61 @@ public class DeviceIntegrityChecker {
     private static boolean checkRoot(List<String> reasons) {
         boolean rooted = false;
 
-        if (checkRootFiles()) {
-            reasons.add("Root files detected on device");
+        List<String> rootFiles = checkRootFilesDetailed();
+        if (!rootFiles.isEmpty()) {
+            for (String file : rootFiles) {
+                String msg = "Root file found: " + file;
+                Log.w(TAG, msg);
+                reasons.add(msg);
+            }
             rooted = true;
         }
 
-        if (checkRootPackages()) {
-            reasons.add("Root management apps detected");
+        List<String> rootPkgs = checkRootPackagesDetailed();
+        if (!rootPkgs.isEmpty()) {
+            for (String pkg : rootPkgs) {
+                String msg = "Root package found: " + pkg;
+                Log.w(TAG, msg);
+                reasons.add(msg);
+            }
             rooted = true;
         }
 
-        if (checkSuBinary()) {
-            reasons.add("SU binary found");
+        String suResult = checkSuBinaryDetailed();
+        if (suResult != null) {
+            String msg = "SU binary found: " + suResult;
+            Log.w(TAG, msg);
+            reasons.add(msg);
             rooted = true;
         }
 
-        if (checkRootProperties()) {
-            reasons.add("Dangerous system properties detected");
+        String propResult = checkRootPropertiesDetailed();
+        if (propResult != null) {
+            String msg = "Dangerous property: " + propResult;
+            Log.w(TAG, msg);
+            reasons.add(msg);
             rooted = true;
         }
 
         if (checkRWPaths()) {
-            reasons.add("System partition is writable");
+            String msg = "System partition is writable (rw mount detected)";
+            Log.w(TAG, msg);
+            reasons.add(msg);
             rooted = true;
         }
 
-        if (checkBusyBox()) {
-            reasons.add("BusyBox binary detected");
+        String busybox = checkBusyBoxDetailed();
+        if (busybox != null) {
+            String msg = "BusyBox found: " + busybox;
+            Log.w(TAG, msg);
+            reasons.add(msg);
             rooted = true;
         }
 
         return rooted;
     }
 
-    private static boolean checkRootFiles() {
+    private static List<String> checkRootFilesDetailed() {
         String[] rootPaths = {
             "/system/app/Superuser.apk",
             "/system/app/SuperSU.apk",
@@ -126,15 +155,16 @@ public class DeviceIntegrityChecker {
             "/system/addon.d/99-magisk.sh"
         };
 
+        List<String> found = new ArrayList<>();
         for (String path : rootPaths) {
             if (new File(path).exists()) {
-                return true;
+                found.add(path);
             }
         }
-        return false;
+        return found;
     }
 
-    private static boolean checkRootPackages() {
+    private static List<String> checkRootPackagesDetailed() {
         String[] rootPackages = {
             "com.topjohnwu.magisk",
             "com.koushikdutta.superuser",
@@ -161,16 +191,17 @@ public class DeviceIntegrityChecker {
             "me.bmax.apatch"
         };
 
+        List<String> found = new ArrayList<>();
         for (String pkg : rootPackages) {
             File pkgDir = new File("/data/data/" + pkg);
             if (pkgDir.exists()) {
-                return true;
+                found.add(pkg);
             }
         }
-        return false;
+        return found;
     }
 
-    private static boolean checkSuBinary() {
+    private static String checkSuBinaryDetailed() {
         String[] places = {
             "/sbin/su", "/system/bin/su", "/system/xbin/su",
             "/data/local/xbin/su", "/data/local/bin/su",
@@ -180,7 +211,7 @@ public class DeviceIntegrityChecker {
 
         for (String path : places) {
             if (new File(path).exists()) {
-                return true;
+                return path;
             }
         }
 
@@ -191,42 +222,35 @@ public class DeviceIntegrityChecker {
             String line = reader.readLine();
             process.destroy();
             if (line != null && !line.isEmpty()) {
-                return true;
+                return "which su -> " + line;
             }
         } catch (Exception e) {
             // Ignored - su not found is expected
         }
 
-        return false;
+        return null;
     }
 
-    private static boolean checkRootProperties() {
+    private static String checkRootPropertiesDetailed() {
         try {
-            String[] dangerousProps = {
-                "ro.debuggable",
-                "ro.secure"
-            };
-
             Process process = Runtime.getRuntime().exec("getprop");
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
-                for (String prop : dangerousProps) {
-                    if (line.contains(prop)) {
-                        if (line.contains("[ro.debuggable]: [1]")) {
-                            return true;
-                        }
-                        if (line.contains("[ro.secure]: [0]")) {
-                            return true;
-                        }
-                    }
+                if (line.contains("[ro.debuggable]: [1]")) {
+                    process.destroy();
+                    return "ro.debuggable=1";
+                }
+                if (line.contains("[ro.secure]: [0]")) {
+                    process.destroy();
+                    return "ro.secure=0";
                 }
             }
             process.destroy();
         } catch (Exception e) {
             // Ignored
         }
-        return false;
+        return null;
     }
 
     private static boolean checkRWPaths() {
@@ -248,7 +272,7 @@ public class DeviceIntegrityChecker {
         return false;
     }
 
-    private static boolean checkBusyBox() {
+    private static String checkBusyBoxDetailed() {
         String[] busyboxPaths = {
             "/system/xbin/busybox",
             "/system/bin/busybox",
@@ -259,10 +283,10 @@ public class DeviceIntegrityChecker {
 
         for (String path : busyboxPaths) {
             if (new File(path).exists()) {
-                return true;
+                return path;
             }
         }
-        return false;
+        return null;
     }
 
     // MARK: - Emulator Detection

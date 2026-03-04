@@ -22,23 +22,25 @@ class DeviceIntegrityChecker {
 
     static func performAllChecks() -> IntegrityResult {
         let (jailbroken, jailbreakReasons) = checkJailbreak()
-        let (emulator, emulatorReasons) = checkSimulator()
-        let (debugged, debugReasons) = checkDebugger()
-        let (devMode, devModeReasons) = checkDeveloperMode()
+        // Emulator, debugger, and developer mode checks disabled for now
+        // let (emulator, emulatorReasons) = checkSimulator()
+        // let (debugged, debugReasons) = checkDebugger()
+        // let (devMode, devModeReasons) = checkDeveloperMode()
 
         var allReasons: [String] = []
         if jailbroken { allReasons.append(contentsOf: jailbreakReasons) }
-        if emulator { allReasons.append(contentsOf: emulatorReasons) }
-        if debugged { allReasons.append(contentsOf: debugReasons) }
-        if devMode { allReasons.append(contentsOf: devModeReasons) }
+        // if emulator { allReasons.append(contentsOf: emulatorReasons) }
+        // if debugged { allReasons.append(contentsOf: debugReasons) }
+        // if devMode { allReasons.append(contentsOf: devModeReasons) }
 
-        let isSecure = !jailbroken && !emulator && !debugged && !devMode
+        let isSecure = !jailbroken
+        // let isSecure = !jailbroken && !emulator && !debugged && !devMode
 
         return IntegrityResult(
             isJailbroken: jailbroken,
-            isEmulator: emulator,
-            isDebugged: debugged,
-            isDeveloperModeEnabled: devMode,
+            isEmulator: false,
+            isDebugged: false,
+            isDeveloperModeEnabled: false,
             isSecure: isSecure,
             failureReasons: allReasons
         )
@@ -49,29 +51,59 @@ class DeviceIntegrityChecker {
     private static func checkJailbreak() -> (Bool, [String]) {
         var reasons: [String] = []
 
-        if checkJailbreakFiles() {
-            reasons.append("Jailbreak files detected on device")
+        let jailbreakFiles = checkJailbreakFilesDetailed()
+        if !jailbreakFiles.isEmpty {
+            for file in jailbreakFiles {
+                let msg = "Jailbreak file found: \(file)"
+                NSLog("[DeviceSecurity] %@", msg)
+                reasons.append(msg)
+            }
         }
         if checkSandboxViolation() {
-            reasons.append("Sandbox integrity compromised")
+            let msg = "Sandbox integrity compromised - write to /private succeeded"
+            NSLog("[DeviceSecurity] %@", msg)
+            reasons.append(msg)
         }
-        if checkSuspiciousDylibs() {
-            reasons.append("Suspicious dynamic libraries detected")
+        let suspiciousDylibs = checkSuspiciousDylibsDetailed()
+        if !suspiciousDylibs.isEmpty {
+            for lib in suspiciousDylibs {
+                let msg = "Suspicious dylib loaded: \(lib)"
+                NSLog("[DeviceSecurity] %@", msg)
+                reasons.append(msg)
+            }
         }
         if checkForkAvailability() {
-            reasons.append("Process forking available (sandbox broken)")
+            let msg = "Process forking available (sandbox broken)"
+            NSLog("[DeviceSecurity] %@", msg)
+            reasons.append(msg)
         }
-        if checkSymbolicLinks() {
-            reasons.append("Suspicious symbolic links detected")
+        let symlinks = checkSymbolicLinksDetailed()
+        if !symlinks.isEmpty {
+            for link in symlinks {
+                let msg = "Suspicious symbolic link: \(link)"
+                NSLog("[DeviceSecurity] %@", msg)
+                reasons.append(msg)
+            }
         }
-        if checkURLSchemes() {
-            reasons.append("Jailbreak app URL schemes detected")
+        let schemes = checkURLSchemesDetailed()
+        if !schemes.isEmpty {
+            for scheme in schemes {
+                let msg = "Jailbreak URL scheme available: \(scheme)"
+                NSLog("[DeviceSecurity] %@", msg)
+                reasons.append(msg)
+            }
+        }
+
+        if reasons.isEmpty {
+            NSLog("[DeviceSecurity] Jailbreak check PASSED - no issues found")
+        } else {
+            NSLog("[DeviceSecurity] Jailbreak check FAILED - %d issues found", reasons.count)
         }
 
         return (!reasons.isEmpty, reasons)
     }
 
-    private static func checkJailbreakFiles() -> Bool {
+    private static func checkJailbreakFilesDetailed() -> [String] {
         let suspiciousPaths = [
             "/Applications/Cydia.app",
             "/Applications/Sileo.app",
@@ -113,10 +145,12 @@ class DeviceIntegrityChecker {
             "/usr/lib/TweakInject"
         ]
 
+        var foundFiles: [String] = []
         let fileManager = FileManager.default
+
         for path in suspiciousPaths {
             if fileManager.fileExists(atPath: path) {
-                return true
+                foundFiles.append(path + " (FileManager)")
             }
         }
 
@@ -125,11 +159,13 @@ class DeviceIntegrityChecker {
             let file = open(path, O_RDONLY)
             if file != -1 {
                 close(file)
-                return true
+                if !foundFiles.contains(where: { $0.hasPrefix(path) }) {
+                    foundFiles.append(path + " (open)")
+                }
             }
         }
 
-        return false
+        return foundFiles
     }
 
     private static func checkSandboxViolation() -> Bool {
@@ -144,7 +180,7 @@ class DeviceIntegrityChecker {
         }
     }
 
-    private static func checkSuspiciousDylibs() -> Bool {
+    private static func checkSuspiciousDylibsDetailed() -> [String] {
         let suspiciousLibs = [
             "MobileSubstrate",
             "CydiaSubstrate",
@@ -165,19 +201,20 @@ class DeviceIntegrityChecker {
             "libcycript"
         ]
 
+        var foundLibs: [String] = []
         let imageCount = _dyld_image_count()
         for i in 0..<imageCount {
             if let imageName = _dyld_get_image_name(i) {
                 let name = String(cString: imageName)
                 for suspicious in suspiciousLibs {
                     if name.lowercased().contains(suspicious.lowercased()) {
-                        return true
+                        foundLibs.append("\(suspicious) in \(name)")
                     }
                 }
             }
         }
 
-        return false
+        return foundLibs
     }
 
     private static func checkForkAvailability() -> Bool {
@@ -196,7 +233,7 @@ class DeviceIntegrityChecker {
         return false
     }
 
-    private static func checkSymbolicLinks() -> Bool {
+    private static func checkSymbolicLinksDetailed() -> [String] {
         let pathsToCheck = [
             "/Applications",
             "/var/stash/Library/Ringtones",
@@ -207,22 +244,23 @@ class DeviceIntegrityChecker {
             "/var/stash/usr/arm-apple-darwin9"
         ]
 
+        var foundLinks: [String] = []
         let fileManager = FileManager.default
         for path in pathsToCheck {
             do {
                 let attrs = try fileManager.attributesOfItem(atPath: path)
                 if let type = attrs[.type] as? FileAttributeType, type == .typeSymbolicLink {
-                    return true
+                    foundLinks.append(path)
                 }
             } catch {
                 continue
             }
         }
 
-        return false
+        return foundLinks
     }
 
-    private static func checkURLSchemes() -> Bool {
+    private static func checkURLSchemesDetailed() -> [String] {
         let schemes = [
             "cydia://package/com.example.package",
             "sileo://package/com.example.package",
@@ -230,15 +268,16 @@ class DeviceIntegrityChecker {
             "filza:///"
         ]
 
+        var foundSchemes: [String] = []
         for scheme in schemes {
             if let url = URL(string: scheme) {
                 if UIApplication.shared.canOpenURL(url) {
-                    return true
+                    foundSchemes.append(scheme)
                 }
             }
         }
 
-        return false
+        return foundSchemes
     }
 
     // MARK: - Simulator / Emulator Detection
