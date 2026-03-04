@@ -98,20 +98,26 @@ public class DeviceIntegrityChecker {
             rooted = true;
         }
 
-        String propResult = checkRootPropertiesDetailed();
-        if (propResult != null) {
-            String msg = "Dangerous property: " + propResult;
-            Log.w(TAG, msg);
-            reasons.add(msg);
-            rooted = true;
-        }
+        // checkRootPropertiesDetailed disabled: ro.debuggable=1 and ro.secure=0
+        // are build properties (userdebug/eng), NOT root indicators.
+        // Many non-rooted devices (Xiaomi, Poco, custom ROMs) have these set.
+        // String propResult = checkRootPropertiesDetailed();
+        // if (propResult != null) {
+        //     String msg = "Dangerous property: " + propResult;
+        //     Log.w(TAG, msg);
+        //     reasons.add(msg);
+        //     rooted = true;
+        // }
 
-        if (checkRWPaths()) {
-            String msg = "System partition is writable (rw mount detected)";
-            Log.w(TAG, msg);
-            reasons.add(msg);
-            rooted = true;
-        }
+        // checkRWPaths disabled: line.contains("rw") is too broad.
+        // Matches "rw" inside other words and on modern Android with overlay
+        // filesystems, /system + rw can appear for vendor overlays on non-rooted devices.
+        // if (checkRWPaths()) {
+        //     String msg = "System partition is writable (rw mount detected)";
+        //     Log.w(TAG, msg);
+        //     reasons.add(msg);
+        //     rooted = true;
+        // }
 
         String busybox = checkBusyBoxDetailed();
         if (busybox != null) {
@@ -142,7 +148,6 @@ public class DeviceIntegrityChecker {
             "/su/bin",
             "/system/xbin/daemonsu",
             "/system/etc/init.d/99telecom",
-            "/system/lib/libsqlite.so",
             "/system/xbin/mu",
             "/data/adb/magisk",
             "/data/adb/ksu",
